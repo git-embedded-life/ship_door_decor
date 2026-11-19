@@ -1,10 +1,10 @@
 #include <Adafruit_NeoPixel.h>
 #include <driver/rtc_io.h>
 
-#define RUN_TIME_S        10
-#define SENSOR_BOOT_S     6
-#define BATT_KEEPALIVE_S  25
-//#define BATT_KEEPALIVE_S  5
+#define RUN_TIME_S          10
+#define SENSOR_BOOT_S       6
+#define BATT_KEEPALIVE_S    25
+#define KEEPALIVE_PULSE_MS  100
 
 #define PIXEL_POWER_PIN   GPIO_NUM_0
 #define PIXEL_DATA_PIN    GPIO_NUM_1
@@ -90,32 +90,27 @@ void setup() {
 
 
 bool LED_keepalive_Run() {
-  int brightness;
   RTC_DATA_ATTR static unsigned char _random_led = 0;
-  static int increment = 0;
-  static unsigned long lastUpdate = 0;
+  static unsigned long pulseStart = 0;
 
-  if (millis() - lastUpdate < 5) return true;
-  lastUpdate = millis();
+  if (pulseStart == 0) {
+    pulseStart = millis();
+    if (_random_led >= PIXEL_NUM_LEDS) _random_led = 0;
 
-  if (_random_led > PIXEL_NUM_LEDS) _random_led = 0;
-
-  increment++;
-  if (increment <= 255) {
-    brightness = increment;
-  } 
-  else {
-    brightness = 510 - increment;
+    // Pulse a pair of LEDs briefly to guarantee sufficient load (~80-100mA total with ESP32)
+    // to reset the power bank auto-off timer while minimizing active awake time.
+    strip.clear();
+    strip.setPixelColor(_random_led, strip.Color(120, 120, 120));
+    strip.setPixelColor((_random_led + 1) % PIXEL_NUM_LEDS, strip.Color(120, 120, 120));
+    strip.show();
   }
 
-  strip.setPixelColor(_random_led, PIXEL_COLOR(_random_led, brightness, brightness, brightness));
-  strip.show();
-
-  if (increment > 510) {
-    increment = 0;
-    //_random_led = (random() % PIXEL_NUM_LEDS);
-    _random_led++;
-    return false;
+  if (millis() - pulseStart >= KEEPALIVE_PULSE_MS) {
+    strip.clear();
+    strip.show();
+    pulseStart = 0;
+    _random_led = (_random_led + 2) % PIXEL_NUM_LEDS;
+    return false; // Pulse complete, ready to return to sleep
   }
 
   return true;
