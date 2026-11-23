@@ -1,6 +1,6 @@
 # Disney Door Decor Firmware Analysis
 
-This Arduino sketch ([Disney_Door_Decor.ino](file:///C:/Users/jeram/Git%20Repos/ship_door_decor/firmware/Disney_Door_Decor.ino)) implements firmware for a battery-powered, motion-activated illuminated Disney cruise cabin door decoration running on an **ESP32** microcontroller driving a 28-LED WS2812 NeoPixel strip.
+This Arduino sketch ([Disney_Door_Decor.ino](file:///C:/Users/jeram/Git%20Repos/ship_door_decor/firmware/Disney_Door_Decor/Disney_Door_Decor.ino)) implements firmware for a battery-powered, motion-activated illuminated Disney cruise cabin door decoration running on an **ESP32** microcontroller driving a 28-LED WS2812 NeoPixel strip.
 
 ---
 
@@ -74,3 +74,5 @@ The animation cycles sequentially on each wake-up, tracked in RTC memory:
    * Splits the 28 LEDs into two distinct physical zones:
      * **Sky Zone (LEDs 10–25)**: Sunset gradient slowly shifting between warm orange and magenta/rose with twinkling star overlays.
      * **Ocean Zone (LEDs 26–28 & 0–9)**: Dual-frequency wave motion simulating sloshing water between ocean blue and seafoam aqua.
+4. **`LED_pinwheel`**:
+   * 4-blade spinning pinwheel (alternating 2 Red and 2 Orange blades across 7 LEDs each). Features curved blade intensity profiles with anti-aliased transitions between blades, rotating smoothly around the 28-LED ring at ~40 fps.

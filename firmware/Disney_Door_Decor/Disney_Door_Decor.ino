@@ -4,7 +4,7 @@
 #define RUN_TIME_S          10
 #define SENSOR_BOOT_S       6
 #define BATT_KEEPALIVE_S    25
-#define KEEPALIVE_PULSE_MS  100
+#define KEEPALIVE_PULSE_MS  500
 
 #define PIXEL_POWER_PIN   GPIO_NUM_0
 #define PIXEL_DATA_PIN    GPIO_NUM_1
@@ -238,10 +238,71 @@ void LED_splitOceanSky_Run(void) {
 }
 
 
+void LED_pinwheel_Start(void) {
+  for (int i = 0; i < PIXEL_NUM_LEDS; i++) {
+    int blade = (i / 7) % 4;
+    if (blade % 2 == 0) {
+      strip.setPixelColor(i, PIXEL_COLOR(i, 255, 10, 0));       // Red
+    } else {
+      strip.setPixelColor(i, PIXEL_COLOR(i, 255, 120, 0));      // Orange
+    }
+  }
+  strip.show();
+}
+
+
+void LED_pinwheel_Run(void) {
+  static unsigned long lastUpdate = 0;
+  if (millis() - lastUpdate < 25) return; // ~40 fps
+  lastUpdate = millis();
+
+  unsigned long ms = millis();
+  // 4-blade pinwheel (2 Red, 2 Orange), completing 1 full revolution every 2 seconds
+  float rotOffset = (float)PIXEL_NUM_LEDS * (ms / 2000.0);
+
+  for (int i = 0; i < PIXEL_NUM_LEDS; i++) {
+    float pos = fmod((float)i + rotOffset, (float)PIXEL_NUM_LEDS);
+    if (pos < 0) pos += PIXEL_NUM_LEDS;
+
+    // 4 blades of 7 LEDs each: blades 0 & 2 = Red, blades 1 & 3 = Orange
+    int blade = (int)(pos / 7.0);
+    float frac = (pos - (blade * 7.0)) / 7.0; // 0.0 (trailing root) to 1.0 (leading tip)
+
+    bool isRed = (blade % 2 == 0);
+    float rootR = isRed ? 160.0 : 180.0;
+    float rootG = isRed ? 0.0   : 45.0;
+    float tipR  = 255.0;
+    float tipG  = isRed ? 15.0  : 130.0;
+
+    float r, g;
+    // Boundary transition zone (~0.84 LED) for smooth anti-aliased rotation across discrete pixels
+    const float transWidth = 0.12;
+    if (frac < transWidth) {
+      bool prevIsRed = !isRed;
+      float prevTipR = 255.0;
+      float prevTipG = prevIsRed ? 15.0 : 130.0;
+
+      float blend = frac / transWidth;
+      r = (1.0 - blend) * prevTipR + blend * rootR;
+      g = (1.0 - blend) * prevTipG + blend * rootG;
+    } else {
+      float t = (frac - transWidth) / (1.0 - transWidth);
+      float curve = t * t; // Curved intensity profile along pinwheel blade
+      r = rootR + (tipR - rootR) * curve;
+      g = rootG + (tipG - rootG) * curve;
+    }
+
+    strip.setPixelColor(i, PIXEL_COLOR(i, (uint8_t)r, (uint8_t)g, 0));
+  }
+  strip.show();
+}
+
+
 const pattern_fns_t pattern_fns[] = {
   {LED_allWhite_Start, LED_allWhite_Run},
   {LED_allBlue_Start, LED_allBlue_Run},
-  {LED_splitOceanSky_Start, LED_splitOceanSky_Run}
+  {LED_splitOceanSky_Start, LED_splitOceanSky_Run},
+  {LED_pinwheel_Start, LED_pinwheel_Run}
 };
 
 
